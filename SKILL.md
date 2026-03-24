@@ -10,33 +10,50 @@ Use this skill when user wants to interact with Gmail and Google Calendar using 
 - User wants to create Calendar events
 - OAuth is blocked/disabled
 
-## Prerequisites
+## Setup
 
-### 1. App Password Setup
+### 1. Create App Password
 
-User must create an App Password:
 1. Go to https://myaccount.google.com/apppasswords
 2. Sign in (must have 2-Step Verification enabled)
 3. Create new App Password for "Mail"
-4. Provide the 16-character password (format: `xxxx xxxx xxxx xxxx`)
+4. Copy the 16-character password (format: `xxxx xxxx xxxx xxxx`)
 
-### 2. Configuration
+### 2. Set Environment Variables
 
-Store credentials in environment variables or config:
-- Email: `[YOUR_EMAIL]@gmail.com`
-- App Password: `[YOUR_APP_PASSWORD]` (16 chars with spaces)
+Add to your environment or OpenClaw config:
 
-## Commands
+```bash
+export GMAIL_EMAIL="your-email@gmail.com"
+export GMAIL_APP_PASSWORD="xxxx xxxx xxxx xxxx"
+```
 
-### Send Email (Gmail SMTP)
+Or set in OpenClaw gateway environment:
+```json
+{
+  "gateway": {
+    "env": {
+      "GMAIL_EMAIL": "your-email@gmail.com",
+      "GMAIL_APP_PASSWORD": "xxxx xxxx xxxx xxxx"
+    }
+  }
+}
+```
+
+## Usage Examples
+
+### Send Email
 
 ```python
 import smtplib
-from email.message import EmailMessage
 import os
+from email.message import EmailMessage
 
-EMAIL = os.environ.get('GMAIL_EMAIL', 'your-email@gmail.com')
-APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', 'xxxx xxxx xxxx xxxx')
+EMAIL = os.environ.get('GMAIL_EMAIL')
+APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '').replace(' ', '')
+
+if not EMAIL or not APP_PASSWORD:
+    raise ValueError("GMAIL_EMAIL and GMAIL_APP_PASSWORD required")
 
 msg = EmailMessage()
 msg['From'] = EMAIL
@@ -50,26 +67,24 @@ with smtplib.SMTP('smtp.gmail.com', 587) as server:
     server.send_message(msg)
 ```
 
-### Read Email (Gmail IMAP)
+### Read Email
 
 ```python
 import imaplib
-import email
 import os
 
-EMAIL = os.environ.get('GMAIL_EMAIL', 'your-email@gmail.com')
-APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', 'xxxx xxxx xxxx xxxx')
+EMAIL = os.environ.get('GMAIL_EMAIL')
+APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '').replace(' ', '')
 
 mail = imaplib.IMAP4_SSL('imap.gmail.com')
 mail.login(EMAIL, APP_PASSWORD)
 mail.select('inbox')
-
 status, messages = mail.search(None, 'ALL')
 # Process messages...
 mail.logout()
 ```
 
-### List Calendar Events (CalDAV)
+### List Calendar Events
 
 ```python
 import urllib.request
@@ -77,24 +92,21 @@ import base64
 import urllib.parse
 import os
 
-EMAIL = os.environ.get('GMAIL_EMAIL', 'your-email@gmail.com')
-APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', 'xxxx xxxx xxxx xxxx')
+EMAIL = os.environ.get('GMAIL_EMAIL')
+APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '').replace(' ', '')
 
 auth = base64.b64encode(f"{EMAIL}:{APP_PASSWORD}".encode()).decode()
+url = f'https://www.google.com/calendar/dav/{urllib.parse.quote(EMAIL)}/events/'
 
-req = urllib.request.Request(
-    f'https://www.google.com/calendar/dav/{urllib.parse.quote(EMAIL)}/events/',
-    method='PROPFIND'
-)
+req = urllib.request.Request(url, method='PROPFIND')
 req.add_header('Authorization', f'Basic {auth}')
 req.add_header('Depth', '1')
 
 with urllib.request.urlopen(req) as response:
     data = response.read().decode()
-# Process calendar data...
 ```
 
-### Create Calendar Event (CalDAV)
+### Create Calendar Event
 
 ```python
 import urllib.request
@@ -103,12 +115,11 @@ import urllib.parse
 import os
 from datetime import datetime, timedelta
 
-EMAIL = os.environ.get('GMAIL_EMAIL', 'your-email@gmail.com')
-APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', 'xxxx xxxx xxxx xxxx')
+EMAIL = os.environ.get('GMAIL_EMAIL')
+APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '').replace(' ', '')
 
 def create_event(title, start_datetime, duration_minutes=60):
     end_dt = start_datetime + timedelta(minutes=duration_minutes)
-    
     event_ics = f"""BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
@@ -119,12 +130,9 @@ END:VEVENT
 END:VCALENDAR"""
     
     auth = base64.b64encode(f"{EMAIL}:{APP_PASSWORD}".encode()).decode()
+    url = f'https://www.google.com/calendar/dav/{urllib.parse.quote(EMAIL)}/events/'
     
-    req = urllib.request.Request(
-        f'https://www.google.com/calendar/dav/{urllib.parse.quote(EMAIL)}/events/',
-        data=event_ics.encode(),
-        method='PUT'
-    )
+    req = urllib.request.Request(url, data=event_ics.encode(), method='PUT')
     req.add_header('Authorization', f'Basic {auth}')
     req.add_header('Content-Type', 'text/calendar')
     
@@ -138,7 +146,7 @@ END:VCALENDAR"""
 - ✅ Read emails via Gmail IMAP
 - ✅ List calendar events via CalDAV
 - ✅ Create calendar events via CalDAV
-- ✅ No OAuth required (uses App Password)
+- ✅ Uses environment variables for credentials
 
 ## Limitations
 
@@ -151,19 +159,24 @@ END:VCALENDAR"""
 
 **"Authentication failed"**: Check App Password is correct and 2-Step Verification is enabled
 
+**"Username and Password not accepted"**: 
+- Remove spaces from App Password
+- Create new App Password at https://myaccount.google.com/apppasswords
+
 **"Calendar not found"**: Use correct email format in CalDAV URL, remember to URL-encode
 
 **"534-5.7.9"**: Need to create App Password, not regular password
 
-## Full Guide
+## Environment Variables
 
-See `GUIDE.md` for comprehensive documentation including:
-- Step-by-step setup instructions
-- More use cases
-- Troubleshooting
-- Security best practices
-- Ready-to-use scripts
+| Variable | Description | Required |
+|----------|-------------|----------|
+| GMAIL_EMAIL | Your Gmail address | Yes |
+| GMAIL_APP_PASSWORD | App Password (16 chars, spaces optional) | Yes |
 
 ## Notes
 
-This skill is a fallback when OAuth is blocked. For full Google Workspace features, use gws skill with proper OAuth setup.
+- This skill uses environment variables for security - never hardcode credentials
+- App Password must be created at https://myaccount.google.com/apppasswords
+- 2-Step Verification must be enabled on the Google account
+- For full Google Workspace features, use OAuth-based integration instead
