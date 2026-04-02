@@ -1,165 +1,83 @@
-# 📧 OpenClaw Gmail & Calendar Skill
+# 📧 Gmail & Calendar Skill for OpenClaw
 
-> สกิลสำหรับเชื่อมต่อ Gmail และ Google Calendar กับ OpenClaw โดยใช้ App Password
+> OpenClaw Skill สำหรับเชื่อมต่อ Gmail และ Calendar ผ่าน App Password (ไม่ต้องใช้ OAuth)
 
-[![OpenClaw](https://img.shields.io/badge/OpenClaw-Personal%20AI%20Assistant-blue)](https://github.com/openclaw/openclaw)
+[![OpenClaw](https://img.shields.io/badge/OpenClaw-2026.4.1-blue)](https://github.com/openclaw/openclaw)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Author](https://img.shields.io/badge/Author-Mew-purple)](https://github.com/openclaw)
 
 ---
 
-## ✨ คุณสมบัติ
+## 📋 สารบัญ
 
-- ✅ **ส่ง Email** - ส่ง email ผ่าน Gmail SMTP
-- ✅ **อ่าน Email** - อ่าน email ผ่าน IMAP
-- ✅ **Calendar** - ดู/สร้าง events ผ่าน CalDAV
-- 🔒 **ปลอดภัย** - ใช้ App Password แทน OAuth
-- 🚫 **ไม่ต้อง OAuth** - ไม่โดน Google บล็อก
-
----
-
-## 📋 ความต้องการ
-
-| รายการ | รายละเอียด |
-|---------|-------------|
-| OpenClaw | เวอร์ชันล่าสุด |
-| Python | 3.8+ |
-| บัญชี Gmail | ที่มี 2-Step Verification |
-| App Password | 16 ตัวอักษร |
+| เอกสาร | คำอธิบาย |
+|---------|-----------|
+| [คู่มือการติดตั้ง](docs/01-Setup-Guide.md) | ขั้นตอนการตั้งค่า App Password และติดตั้งสกิล |
+| [คำอ้างอิงสกิล](docs/02-Skill-Reference.md) | API Reference และตัวอย่างการใช้งาน |
 
 ---
 
-## 🚀 การติดตั้ง
+## 🎯 Features
+
+| Feature | Status | คำอธิบาย |
+|---------|--------|-----------|
+| **Send Email (SMTP)** | ✅ | ส่ง email ผ่าน Gmail SMTP |
+| **Read Email (IMAP)** | ✅ | อ่าน email ผ่าน IMAP |
+| **Calendar Events (CalDAV)** | ✅ | ดู/สร้าง calendar events |
+| **Delete Spam/Promotions** | ✅ | ลบ email ขยะอัตโนมัติ |
+
+---
+
+## ⚡ เริ่มต้นใช้งาน
 
 ### 1. สร้าง App Password
 
-```bash
-# 1. ไปที่ https://myaccount.google.com/apppasswords
-# 2. เปิด 2-Step Verification ก่อน (ถ้ายังไม่เปิด)
-# 3. สร้าง App Password สำหรับ "Mail"
-# 4. บันทึกรหัส 16 ตัว (รูปแบบ: xxxx xxxx xxxx xxxx)
-```
+1. ไปที่ [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+2. ต้องเปิด **2-Step Verification** ก่อน
+3. สร้าง App Password 16 ตัวอักษร
 
-### 2. ติดตั้งสกิล
+### 2. ตั้งค่า Environment Variables
 
 ```bash
-# คัดลอกไฟล์ไปยัง OpenClaw
-cp -r gmail-calendar /app/skills/
+export GMAIL_EMAIL="your-email@gmail.com"
+export GMAIL_APP_PASSWORD="xxxx xxxx xxxx xxxx"
 ```
 
-### 3. ตั้งค่า Credentials
+### 3. ดูรายละเอียดการติดตั้ง
 
-แก้ไขโค้ดเพื่อใส่ email และ app password ของคุณ:
+👉 **[อ่านคู่มือติดตั้งฉบับเต็ม](docs/01-Setup-Guide.md)**
 
-```python
-EMAIL = "your-email@gmail.com"
-APP_PASSWORD = "xxxx xxxx xxxx xxxx"
+---
+
+## 📚 โครงสร้างไฟล์
+
+```
+openclaw-gmail-calendar-skill/
+├── README.md                      ← สารบัญ (ไฟล์นี้)
+├── LICENSE                        ← MIT License
+└── docs/
+    ├── 01-Setup-Guide.md          ← คู่มือการติดตั้ง
+    └── 02-Skill-Reference.md      ← API Reference
 ```
 
 ---
 
-## 📖 การใช้งาน
+## 🛠️ ข้อมูลทั่วไป
 
-### ส่ง Email
-
-```python
-import smtplib
-from email.message import EmailMessage
-
-EMAIL = "your-email@gmail.com"
-APP_PASSWORD = "xxxx xxxx xxxx xxxx"
-
-msg = EmailMessage()
-msg['From'] = EMAIL
-msg['To'] = 'recipient@example.com'
-msg['Subject'] = 'หัวข้อ'
-msg.set_content('เนื้อหา')
-
-with smtplib.SMTP('smtp.gmail.com', 587) as server:
-    server.starttls()
-    server.login(EMAIL, APP_PASSWORD)
-    server.send_message(msg)
-```
-
-### อ่าน Calendar Events
-
-```python
-import urllib.request
-import base64
-import urllib.parse
-
-EMAIL = "your-email@gmail.com"
-APP_PASSWORD = "xxxx xxxx xxxx xxxx"
-
-auth = base64.b64encode(f"{EMAIL}:{APP_PASSWORD}".encode()).decode()
-url = f'https://www.google.com/calendar/dav/{urllib.parse.quote(EMAIL)}/events/'
-
-req = urllib.request.Request(url, method='PROPFIND')
-req.add_header('Authorization', f'Basic {auth}')
-req.add_header('Depth', '1')
-
-with urllib.request.urlopen(req) as response:
-    data = response.read().decode()
-```
-
-### สร้าง Calendar Event
-
-```python
-from datetime import datetime, timedelta
-import urllib.request
-import base64
-import urllib.parse
-
-# สร้าง event...
-```
-
-ดูรายละเอียดเพิ่มเติมใน [GUIDE.md](GUIDE.md)
+| รายการ | รายละเอียด |
+|---------|-------------|
+| **ผู้พัฒนา** | โจ้ พัฒนากร |
+| **ผู้เขียนสกิล** | มิว (Mew AI) |
+| **สัญญาอนุญาต** | MIT License |
 
 ---
 
-## ❌ สิ่งที่ทำไม่ได้
+## 🔗 ลิงก์ที่เกี่ยวข้อง
 
-| Service | สถานะ |
-|---------|--------|
-| Google Drive | ❌ ต้องใช้ OAuth |
-| Google Sheets | ❌ ต้องใช้ OAuth |
-| Google Docs | ❌ ต้องใช้ OAuth |
-| Google Contacts | ❌ ต้องใช้ OAuth |
+- [OpenClaw Documentation](https://docs.openclaw.ai)
+- [Google App Passwords](https://myaccount.google.com/apppasswords)
+- [OpenClaw Community](https://discord.com/invite/clawd)
 
 ---
 
-## 🔐 ความปลอดภัย
-
-- ✅ ใช้ App Password แทนรหัสผ่านหลัก
-- ✅ ไม่จำเป็นต้องให้สิทธิ์ OAuth
-- ✅ ปิด 2-Step Verification ไม่ได้ (ต้องเปิด)
-- ⚠️ เก็บ App Password ให้ปลอดภัย!
-
----
-
-## 📚 เอกสาร
-
-- [SKILL.md](SKILL.md) - คู่มือสั้นสำหรับ AI
-- [GUIDE.md](GUIDE.md) - คู่มือฉบับสมบูรณ์
-
----
-
-## 🤝 มีส่วนร่วม
-
-ยินดีรับ contribution! กรุณาสร้าง Pull Request หรือ Issue ได้เลย
-
----
-
-## 📄 License
-
-MIT License - ดูรายละเอียดใน [LICENSE](LICENSE)
-
----
-
-## 🙏 ขอบคุณ
-
-- [OpenClaw](https://github.com/openclaw/openclaw) - Personal AI Assistant
-- [Google Calendar CalDAV](https://developers.google.com/calendar) - Calendar API
-
----
-
-**Made with ❤️ for OpenClaw**
+*สกิลนี้เป็นส่วนหนึ่งของ OpenClaw Gmail-Calendar Skill — พัฒนาโดย โจ้ พัฒนากร | ผู้เขียน: มิว (Mew AI)* 💖
